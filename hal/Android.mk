@@ -318,28 +318,17 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_BT_HAL)),true)
     LOCAL_SRC_FILES += audio_extn/bt_hal.c
 endif
 
-ifeq ($(strip $(USE_LIB_PROCESS_GROUP)),true)
 LOCAL_SHARED_LIBRARIES := \
         liblog \
         libcutils \
         libtinyalsa \
-        libtinycompress_vendor \
+        libtinycompress \
         libaudioroute \
         libdl \
         libaudioutils \
         libexpat \
         libhidltransport \
         libprocessgroup
-else
-LOCAL_SHARED_LIBRARIES := \
-	liblog \
-	libcutils \
-	libtinyalsa \
-	libaudioroute \
-	libdl \
-	libaudioutils \
-	libexpat
-endif
 
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_QAP)),true)
 LOCAL_CFLAGS += -DQAP_EXTN_ENABLED -Wno-tautological-pointer-compare
@@ -347,12 +336,6 @@ LOCAL_SRC_FILES += audio_extn/qap.c
 LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/mm-audio/qap_wrapper/
 LOCAL_HEADER_LIBRARIES += audio_qaf_headers
 LOCAL_SHARED_LIBRARIES += libqap_wrapper liblog
-endif
-
-ifneq ($(strip $(TARGET_USES_AOSP_FOR_AUDIO)),true)
-    LOCAL_SHARED_LIBRARIES += libtinycompress_vendor
-else
-    LOCAL_SHARED_LIBRARIES += libtinycompress
 endif
 
 LOCAL_C_INCLUDES += \
@@ -464,6 +447,7 @@ endif
 
 LOCAL_CFLAGS += -D_GNU_SOURCE
 LOCAL_CFLAGS += -Wall -Werror
+LOCAL_CLANG_CFLAGS += -Wno-unused-variable -Wno-unused-function -Wno-missing-field-initializers
 
 LOCAL_COPY_HEADERS_TO   := mm-audio
 LOCAL_COPY_HEADERS      := audio_extn/audio_defs.h
