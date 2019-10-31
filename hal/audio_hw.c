@@ -1,3 +1,5 @@
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
 /*
  * Copyright (c) 2013-2019, The Linux Foundation. All rights reserved.
  * Not a Contribution.
@@ -8187,3 +8189,4 @@ struct audio_module HAL_MODULE_INFO_SYM = {
         .methods = &hal_module_methods,
     },
 };
+#pragma GCC diagnostic pop
