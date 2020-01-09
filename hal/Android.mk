@@ -445,6 +445,12 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_FFV)), true)
     LOCAL_SRC_FILES += audio_extn/ffv.c
 endif
 
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_EXTENDED_COMPRESS_FORMAT)), true)
+    LOCAL_CFLAGS += -DENABLE_EXTENDED_COMPRESS_FORMAT
+endif
+
+
+
 LOCAL_CFLAGS += -D_GNU_SOURCE
 LOCAL_CFLAGS += -Wall -Werror
 LOCAL_CLANG_CFLAGS += -Wno-unused-variable -Wno-unused-function -Wno-missing-field-initializers
