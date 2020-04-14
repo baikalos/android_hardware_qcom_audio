@@ -772,7 +772,6 @@ typedef struct {
 
 static void update_offload_codec_capabilities()
 {
-
     a2dp.is_a2dp_offload_supported =
             property_get_bool(SYSPROP_A2DP_OFFLOAD_SUPPORTED, false) &&
             !property_get_bool(SYSPROP_A2DP_OFFLOAD_DISABLED, false);
@@ -990,11 +989,20 @@ static void open_a2dp_source() {
         ALOGE("a2dp handle is not identified, Ignoring open request");
         a2dp.bt_state_source = A2DP_STATE_DISCONNECTED;
     }
+
+    if( a2dp.adev->mixer == NULL ) {
+        ALOGE(" ERROR open_a2dp_source Can't open mixer for a2dp audio device. reopen");
+        a2dp.adev->mixer = mixer_open(0);
+        if( a2dp.adev->mixer == NULL ) {
+            ALOGE(" ERROR open_a2dp_source Can't open mixer for a2dp audio device");
+        }
+    }
 }
 /* API to open BT IPC library to start IPC communication for BT Source*/
 static void a2dp_source_init()
 {
     ALOGD("a2dp_source_init START");
+
     if (a2dp.bt_lib_source_handle == NULL) {
         ALOGD("Requesting for BT lib handle");
         a2dp.bt_lib_source_handle = dlopen(BT_IPC_SOURCE_LIB_NAME, RTLD_NOW);
@@ -1093,6 +1101,10 @@ static int close_a2dp_output()
     a2dp.abr_config.abr_rx_handle = NULL;
     a2dp.bt_state_source = A2DP_STATE_DISCONNECTED;
 
+    if( a2dp.adev != NULL && a2dp.adev->mixer != NULL ) {
+        mixer_close(a2dp.adev->mixer);
+    }
+
     return 0;
 }
 
@@ -1124,6 +1136,7 @@ static void a2dp_check_and_set_scrambler()
 {
     bool scrambler_mode = false;
     struct mixer_ctl *ctrl_scrambler_mode = NULL;
+
     if (a2dp.audio_is_source_scrambling_enabled && (a2dp.bt_state_source != A2DP_STATE_DISCONNECTED))
         scrambler_mode = a2dp.audio_is_source_scrambling_enabled();
 
@@ -1602,9 +1615,9 @@ bool configure_sbc_enc_format(audio_sbc_encoder_config *sbc_bt_cfg)
     if (sbc_bt_cfg == NULL)
         return false;
 
-   ctl_enc_data = mixer_get_ctl_by_name(a2dp.adev->mixer, MIXER_ENC_CONFIG_BLOCK);
+    ctl_enc_data = mixer_get_ctl_by_name(a2dp.adev->mixer, MIXER_ENC_CONFIG_BLOCK);
     if (!ctl_enc_data) {
-        ALOGE(" ERROR  a2dp encoder CONFIG data mixer control not identified");
+        ALOGE(" ERROR  a2dp encoder CONFIG data mixer control (%s) not identified", MIXER_ENC_CONFIG_BLOCK);
         is_configured = false;
         goto fail;
     }
@@ -2902,6 +2915,7 @@ bool a2dp_source_is_suspended()
 void a2dp_init(void *adev,
                a2dp_offload_init_config_t init_config)
 {
+
   a2dp.adev = (struct audio_device*)adev;
   a2dp.bt_lib_source_handle = NULL;
   a2dp.a2dp_source_started = false;
