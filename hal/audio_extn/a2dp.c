@@ -28,7 +28,7 @@
 */
 #define LOG_TAG "a2dp_offload"
 /*#define LOG_NDEBUG 0*/
-#define LOG_NDDEBUG 0
+/*#define LOG_NDDEBUG 0*/
 #include <errno.h>
 #include <log/log.h>
 #include <dlfcn.h>
@@ -2740,15 +2740,22 @@ int a2dp_set_parameters(struct str_parms *parms, bool *reconfig)
      struct audio_usecase *uc_info;
      struct listnode *node;
 
+     ALOGV("%s: enter %p, %p", __func__, parms, reconfig);
+
      if (a2dp.is_a2dp_offload_supported == false) {
         ALOGV("no supported encoders identified,ignoring a2dp setparam");
         status = -EINVAL;
         goto param_handled;
      }
 
+     ALOGV("%s: check AUDIO_PARAMETER_DEVICE_CONNECT", __func__);
+
      ret = str_parms_get_str(parms, AUDIO_PARAMETER_DEVICE_CONNECT, value,
                             sizeof(value));
      if (ret >= 0) {
+
+         ALOGV("%s: AUDIO_PARAMETER_DEVICE_CONNECT", __func__);
+
          val = atoi(value);
          if (audio_is_a2dp_out_device(val)) {
              ALOGV("Received device connect request for A2DP source");
@@ -2757,10 +2764,13 @@ int a2dp_set_parameters(struct str_parms *parms, bool *reconfig)
          goto param_handled;
      }
 
+     ALOGV("%s: check AUDIO_PARAMETER_DEVICE_DISCONNECT", __func__);
+
      ret = str_parms_get_str(parms, AUDIO_PARAMETER_DEVICE_DISCONNECT, value,
                          sizeof(value));
+      if (ret >= 0) {
+         ALOGV("%s: AUDIO_PARAMETER_DEVICE_DISCONNECT", __func__);
 
-     if (ret >= 0) {
          val = atoi(value);
          if (audio_is_a2dp_out_device(val)) {
              ALOGV("Received source device dis- connect request");
@@ -2777,8 +2787,14 @@ int a2dp_set_parameters(struct str_parms *parms, bool *reconfig)
          goto param_handled;
      }
 #ifndef LINUX_ENABLED
+
+     ALOGV("%s: check TwsChannelConfig", __func__);
+
      ret = str_parms_get_str(parms, "TwsChannelConfig", value, sizeof(value));
      if (ret>=0) {
+
+         ALOGV("%s: TwsChannelConfig", __func__);
+
          ALOGD("Setting tws channel mode to %s",value);
          if (!(strncmp(value,"mono",strlen(value))))
             a2dp.is_tws_mono_mode_on = true;
@@ -2788,8 +2804,14 @@ int a2dp_set_parameters(struct str_parms *parms, bool *reconfig)
      goto param_handled;
      }
 #endif
+
+     ALOGV("%s: check A2dpSuspended", __func__);
+
      ret = str_parms_get_str(parms, "A2dpSuspended", value, sizeof(value));
      if (ret >= 0) {
+
+         ALOGV("%s: A2dpSuspended", __func__);
+
          if (a2dp.bt_lib_source_handle) {
              if ((!strncmp(value,"true",sizeof(value)))) {
                 if (a2dp.a2dp_source_suspended) {
@@ -2798,21 +2820,32 @@ int a2dp_set_parameters(struct str_parms *parms, bool *reconfig)
                 }
                 ALOGD("Setting a2dp to suspend state");
                 a2dp.a2dp_source_suspended = true;
-                if (a2dp.bt_state_source == A2DP_STATE_DISCONNECTED)
+                if (a2dp.bt_state_source == A2DP_STATE_DISCONNECTED) {
                     goto param_handled;
-                list_for_each(node, &a2dp.adev->usecase_list) {
-                    uc_info = node_to_item(node, struct audio_usecase, list);
-                    if (uc_info->stream.out && uc_info->type == PCM_PLAYBACK &&
-                         (uc_info->stream.out->devices & AUDIO_DEVICE_OUT_ALL_A2DP)) {
-                        pthread_mutex_unlock(&a2dp.adev->lock);
-                        fp_check_a2dp_restore(a2dp.adev, uc_info->stream.out, false);
-                        pthread_mutex_lock(&a2dp.adev->lock);
-                    }
                 }
-                if (!a2dp.swb_configured)
+                if( a2dp.adev != 0 ) {
+                    list_for_each(node, &a2dp.adev->usecase_list) {
+                        if( node != 0 ) {
+                            uc_info = node_to_item(node, struct audio_usecase, list);
+                            if (uc_info && uc_info->stream.out && uc_info->type == PCM_PLAYBACK &&
+                                 (uc_info->stream.out->devices & AUDIO_DEVICE_OUT_ALL_A2DP)) {
+                                pthread_mutex_unlock(&a2dp.adev->lock);
+                                fp_check_a2dp_restore(a2dp.adev, uc_info->stream.out, false);
+                                pthread_mutex_lock(&a2dp.adev->lock);
+                            }
+                        } else {
+                            break;
+                        }
+                    }
+                } else {
+                    ALOGD("a2dp.adev = 0 !!!!!!!!!!!!!!!!!!!!");
+                }
+                if (!a2dp.swb_configured) {
                     reset_codec_config();
-                if (a2dp.audio_source_suspend)
+                }
+                if (a2dp.audio_source_suspend) {
                    a2dp.audio_source_suspend();
+                }
             } else if (a2dp.a2dp_source_suspended == true) {
                 ALOGD("Resetting a2dp suspend state");
                 struct audio_usecase *uc_info;
@@ -2841,26 +2874,42 @@ int a2dp_set_parameters(struct str_parms *parms, bool *reconfig)
                         }
                     }
                 }
-                list_for_each(node, &a2dp.adev->usecase_list) {
-                    uc_info = node_to_item(node, struct audio_usecase, list);
-                    if (uc_info->stream.out && uc_info->type == PCM_PLAYBACK &&
-                         (uc_info->stream.out->devices & AUDIO_DEVICE_OUT_ALL_A2DP)) {
-                        pthread_mutex_unlock(&a2dp.adev->lock);
-                        fp_check_a2dp_restore(a2dp.adev, uc_info->stream.out, true);
-                        pthread_mutex_lock(&a2dp.adev->lock);
+                if( a2dp.adev != 0 ) {
+                    list_for_each(node, &a2dp.adev->usecase_list) {
+                        if( node != 0 ) {
+                            uc_info = node_to_item(node, struct audio_usecase, list);
+                            if (uc_info && uc_info->stream.out && uc_info->type == PCM_PLAYBACK &&
+                                 (uc_info->stream.out->devices & AUDIO_DEVICE_OUT_ALL_A2DP)) {
+                                pthread_mutex_unlock(&a2dp.adev->lock);
+                                fp_check_a2dp_restore(a2dp.adev, uc_info->stream.out, true);
+                                pthread_mutex_lock(&a2dp.adev->lock);
+                            }
+                        } else {
+                            break;
+                        }
                     }
+                } else {
+                    ALOGD("a2dp.adev = 0 !!!!!!!!!!!!!!!!!!!!");
                 }
+
             }
         }
         goto param_handled;
      }
 
+     ALOGV("%s: check AUDIO_PARAMETER_RECONFIG_A2DP", __func__);
+
      ret = str_parms_get_str(parms, AUDIO_PARAMETER_RECONFIG_A2DP, value,
                          sizeof(value));
      if (ret >= 0) {
+
+         ALOGV("%s: AUDIO_PARAMETER_RECONFIG_A2DP", __func__);
+
          if (a2dp.is_a2dp_offload_supported &&
                 a2dp.bt_state_source != A2DP_STATE_DISCONNECTED) {
-             *reconfig = true;
+            if( reconfig != 0 ) {
+                *reconfig = true;
+            }
          }
          goto param_handled;
      }
