@@ -972,7 +972,7 @@ static int check_if_enhanced_fwk() {
 static void open_a2dp_source() {
     int ret = 0;
 
-    ALOGD(" Open A2DP source start ");
+    ALOGE(" Open A2DP source start ");
 
     if (a2dp.bt_lib_source_handle && a2dp.audio_source_open) {
         if (a2dp.bt_state_source == A2DP_STATE_DISCONNECTED) {
@@ -982,6 +982,13 @@ static void open_a2dp_source() {
                 ALOGE("Failed to open source stream for a2dp: status %d", ret);
             }
             a2dp.bt_state_source = A2DP_STATE_CONNECTED;
+            if( a2dp.adev->mixer == NULL ) {
+                ALOGE(" ERROR open_a2dp_source Can't open mixer for a2dp audio device. reopen");
+                a2dp.adev->mixer = mixer_open(0);
+                if( a2dp.adev->mixer == NULL ) {
+                    ALOGE(" ERROR open_a2dp_source Can't open mixer for a2dp audio device");
+                }
+            }
         } else {
             ALOGD("Called a2dp open with improper state %d", a2dp.bt_state_source);
         }
@@ -990,13 +997,6 @@ static void open_a2dp_source() {
         a2dp.bt_state_source = A2DP_STATE_DISCONNECTED;
     }
 
-    if( a2dp.adev->mixer == NULL ) {
-        ALOGE(" ERROR open_a2dp_source Can't open mixer for a2dp audio device. reopen");
-        a2dp.adev->mixer = mixer_open(0);
-        if( a2dp.adev->mixer == NULL ) {
-            ALOGE(" ERROR open_a2dp_source Can't open mixer for a2dp audio device");
-        }
-    }
 }
 /* API to open BT IPC library to start IPC communication for BT Source*/
 static void a2dp_source_init()
@@ -1103,6 +1103,7 @@ static int close_a2dp_output()
 
     if( a2dp.adev != NULL && a2dp.adev->mixer != NULL ) {
         mixer_close(a2dp.adev->mixer);
+        a2dp.adev->mixer = NULL;
     }
 
     return 0;
