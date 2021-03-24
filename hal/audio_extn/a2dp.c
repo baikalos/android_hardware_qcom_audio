@@ -27,8 +27,8 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 #define LOG_TAG "a2dp_offload"
-/*#define LOG_NDEBUG 0*/
-/*#define LOG_NDDEBUG 0*/
+#define LOG_NDEBUG 0
+#define LOG_NDDEBUG 0
 #include <errno.h>
 #include <log/log.h>
 #include <dlfcn.h>
@@ -1009,6 +1009,8 @@ static void a2dp_source_init()
         if (a2dp.bt_lib_source_handle == NULL) {
             ALOGE("%s: dlopen failed for %s", __func__, BT_IPC_SOURCE_LIB_NAME);
             return;
+        } else {
+            ALOGE("%s: dlopen for %s", __func__, BT_IPC_SOURCE_LIB_NAME);
         }
     }
 
@@ -2947,13 +2949,18 @@ bool a2dp_source_is_ready()
 {
     bool ret = false;
 
-    if (a2dp.a2dp_source_suspended)
+    if (a2dp.a2dp_source_suspended) {
+        ALOGI("A2DP source suspended");
         return ret;
+    }
+
+    ALOGI("A2DP source is ready: bss=%d, ios=%d",a2dp.bt_state_source,a2dp.is_a2dp_offload_supported);
 
     if ((a2dp.bt_state_source != A2DP_STATE_DISCONNECTED) &&
         (a2dp.is_a2dp_offload_supported) &&
-        (a2dp.audio_source_check_a2dp_ready))
+        (a2dp.audio_source_check_a2dp_ready)) {
            ret = a2dp.audio_source_check_a2dp_ready();
+    }
     return ret;
 }
 
